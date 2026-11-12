@@ -9,8 +9,59 @@
 <div class="grid"><section class="card wide"><div class="card-in"><h2>Contrôle automatique</h2><p class="card-sub">Exécuté localement dans Safari. Aucune donnée de ton téléphone n’est envoyée.</p><button class="run" id="run">✦ Lancer le contrôle complet</button><div class="checks" id="checks"></div></div></section>
 <section class="card"><div class="card-in"><h2>Analyse de lien</h2><p class="card-sub">Colle une adresse. Vigie ne visite jamais sa destination.</p><form class="link-form" id="link-form"><input id="url" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="https://exemple.com"><button class="secondary">Examiner</button></form><div id="link-result" class="result" aria-live="polite"></div></div></section>
 <section class="card"><div class="card-in"><h2>Contrôles iPhone</h2><p class="card-sub">Safari ne peut pas lire les profils, apps, messages ou appareils de ton compte Apple.</p><div class="timeline"><div class="step"><span>1</span><div><b>Contrôle de sécurité</b><br>Réglages → Confidentialité et sécurité → Contrôle de sécurité</div></div><div class="step"><span>2</span><div><b>Profils et VPN</b><br>Réglages → Général → VPN et gestion de l’appareil</div></div><div class="step"><span>3</span><div><b>Analyse forensique</b><br>Une sauvegarde iPhone sur ordinateur permet de rechercher des traces connues.</div></div></div></div></section>
+<section class="card wide"><div class="card-in"><h2>Inventaire des applications</h2><p class="card-sub">Colle une liste d’applications provenant de ton MDM, d’iMazing ou de tes notes. Une application par ligne. Tu peux ajouter son origine après un séparateur <b>|</b>, par exemple <i>Zoom | App Store</i>.</p><textarea class="notes" id="inventory" maxlength="25000" placeholder="WhatsApp | App Store&#10;AnyDesk | à vérifier&#10;Profil VPN | entreprise"></textarea><div class="footer"><span id="inventory-count">Aucun inventaire importé.</span><span><button class="secondary" id="inventory-run" type="button">Analyser l’inventaire</button></span></div><div id="inventory-result" class="result" aria-live="polite"></div></div></section>
 <section class="card wide"><div class="card-in"><h2>Journal d’incident</h2><p class="card-sub">Garde ce que tu as constaté et télécharge un rapport si nécessaire.</p><textarea class="notes" id="notes" maxlength="12000" placeholder="Date, comportement observé, application concernée…"></textarea><div class="footer"><span>Évite d’écrire des mots de passe ou des codes de validation.</span><span><button class="secondary" id="export" type="button">Télécharger le rapport</button></span></div></div></section></div>
 <p class="footer"><span>Vigie ne peut pas garantir l’absence de compromission.</span><span><a href="https://support.apple.com/fr-fr/102174" rel="noreferrer">Alertes de menace Apple</a> · <a href="https://docs.mvt.re/en/latest/" rel="noreferrer">MVT</a></span></p></main>
 <script>
 "use strict";const key="vigie-v2",checks=[["Connexion chiffrée",()=>location.protocol==="https:","Cette page est ouverte en HTTPS.","La page n’est pas ouverte en HTTPS."],["Cryptographie du navigateur",()=>Boolean(window.crypto&&crypto.subtle),"Web Crypto est disponible.","Web Crypto est indisponible."],["Stockage local",()=>{try{localStorage.setItem("vigie-probe","1");localStorage.removeItem("vigie-probe");return true}catch{return false}},"Le navigateur peut enregistrer ce journal localement.","Le stockage local est indisponible."],["Protection du presse-papiers",()=>Boolean(navigator.clipboard&&isSecureContext),"Les accès demandent une autorisation.","Le navigateur ne confirme pas la protection attendue."],["Environnement iPhone",()=>/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1),"Environnement iOS ou iPadOS détecté.","L’environnement actuel ne se présente pas comme iPhone ou iPad."]],el=id=>document.getElementById(id);let last=[];function load(){try{return JSON.parse(localStorage.getItem(key)||"{}")}catch{return{}}}function save(){try{localStorage.setItem(key,JSON.stringify({notes:el("notes").value,last,at:new Date().toISOString()}))}catch{}}const prior=load();el("notes").value=prior.notes||"";el("notes").addEventListener("input",save);function render(results=[]){const root=el("checks");root.replaceChildren();results.forEach(([title,ok,pass,fail])=>{const row=document.createElement("div");row.className="check";const dot=document.createElement("i");dot.className="dot "+(ok?"ok":"warn");const copy=document.createElement("div");copy.innerHTML="<b>"+title+"</b><small>"+(ok?pass:fail)+"</small>";const status=document.createElement("div");status.className="status";status.textContent=ok?"VÉRIFIÉ":"À EXAMINER";row.append(dot,copy,status);root.append(row)})}function update(results){const good=results.filter(r=>r[1]).length;el("count").textContent=good+" / "+checks.length;el("score").textContent=good===checks.length?"OK":good+" / "+checks.length;el("meter").style.width=(good/checks.length*100)+"%";el("score-text").textContent=good===checks.length?"Les contrôles web sont terminés.":"Certains contrôles demandent ton attention.";el("updated").textContent="Contrôlé à "+new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}async function run(){const button=el("run");button.disabled=true;button.textContent="Contrôle en cours…";last=[];render([]);for(const item of checks){await new Promise(done=>setTimeout(done,160));let ok=false;try{ok=Boolean(item[1]())}catch{}last.push([item[0],ok,item[2],item[3]]);render(last);update(last)}save();button.disabled=false;button.textContent="↻ Relancer le contrôle"}el("run").addEventListener("click",run);function inspect(value){const raw=value.trim();if(!/^https?:\/\//i.test(raw)||/[\\\s]/.test(raw))return null;try{const url=new URL(raw),host=url.hostname.toLowerCase().replace(/\.$/,"");const flags=[];if(url.protocol==="http:")flags.push("Connexion HTTP non chiffrée.");if(url.username||url.password)flags.push("Identifiant masqué avant le domaine.");if(/^\d+\.\d+\.\d+\.\d+$/.test(host)||host.startsWith("["))flags.push("Adresse IP directe.");if(["bit.ly","tinyurl.com","t.co","cutt.ly","is.gd","rebrand.ly"].includes(host))flags.push("Raccourcisseur, destination finale cachée.");if(host.split(".").some(p=>p.startsWith("xn--")))flags.push("Nom de domaine internationalisé.");if(host.split(".").length>=5)flags.push("Nombre élevé de sous-domaines.");return{host,flags}}catch{return null}}el("link-form").addEventListener("submit",event=>{event.preventDefault();const result=inspect(el("url").value),out=el("link-result");if(!result){out.className="result finding";out.textContent="Entre une adresse complète commençant par https:// ou http://.";return}const message=result.flags.length?result.flags.join(" "):"Aucun indice textuel détecté. Cela ne valide pas le site.";out.className="result finding "+(!result.flags.length?"safe":"");out.innerHTML="<b>"+result.host+"</b><br>"+message});el("export").addEventListener("click",()=>{const rows=last.length?last.map(r=>r[0]+" : "+(r[1]?"vérifié":"à examiner")):["Contrôle automatique non lancé."];const report=["Vigie — rapport",new Date().toLocaleString("fr-FR"),"",...rows,"","Notes",el("notes").value.trim()||"Aucune note.","","Vigie ne peut pas diagnostiquer une compromission complète depuis Safari."].join("\n"),file=new Blob([report],{type:"text/plain;charset=utf-8"}),link=document.createElement("a");link.href=URL.createObjectURL(file);link.download="rapport-vigie.txt";document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(link.href),1000)});if(prior.last?.length){last=prior.last;render(last);update(last)}
+</script>
+<script>
+"use strict";
+const inventoryKey = "vigie-inventory-v1";
+const inventoryBox = document.getElementById("inventory");
+const inventoryCount = document.getElementById("inventory-count");
+const inventoryResult = document.getElementById("inventory-result");
+
+try { inventoryBox.value = localStorage.getItem(inventoryKey) || ""; } catch {}
+inventoryBox.addEventListener("input", () => { try { localStorage.setItem(inventoryKey, inventoryBox.value); } catch {} });
+
+function inspectInventory() {
+  const lines = inventoryBox.value.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  const unusual = /anydesk|teamviewer|screenconnect|splashtop|rustdesk|zoho assist|remote desktop|remote control|mdm|profile|vpn|enterprise|sideload/i;
+  const flagged = lines.filter(line => unusual.test(line));
+  const unique = new Set(lines.map(line => line.split("|")[0].trim().toLocaleLowerCase("fr"))).size;
+  inventoryCount.textContent = `${lines.length} ligne${lines.length > 1 ? "s" : ""} · ${unique} application${unique > 1 ? "s" : ""} distincte${unique > 1 ? "s" : ""}`;
+  if (!lines.length) {
+    inventoryResult.className = "result finding";
+    inventoryResult.textContent = "Colle une liste pour lancer l’analyse.";
+    return { lines, flagged };
+  }
+  if (flagged.length) {
+    inventoryResult.className = "result finding";
+    inventoryResult.innerHTML = `<b>${flagged.length} élément${flagged.length > 1 ? "s" : ""} à confirmer</b><br>${flagged.map(value => value.replace(/[<>&]/g, character => ({"<":"&lt;",">":"&gt;","&":"&amp;"}[character]))).join(" · ")}. La présence de ces termes ne prouve pas un piratage. Vérifie l’origine et l’usage de chaque élément.`;
+  } else {
+    inventoryResult.className = "result finding safe";
+    inventoryResult.textContent = "Aucun terme d’accès à distance, de profil, VPN ou gestion d’appareil n’a été trouvé dans la liste. Cette analyse dépend des informations importées.";
+  }
+  return { lines, flagged };
+}
+
+document.getElementById("inventory-run").addEventListener("click", inspectInventory);
+if (inventoryBox.value.trim()) inspectInventory();
+
+document.addEventListener("click", event => {
+  if (event.target.id !== "export") return;
+  event.stopImmediatePropagation();
+  const inventory = inspectInventory();
+  const base = last.length ? last.map(row => `${row[0]} : ${row[1] ? "vérifié" : "à examiner"}`) : ["Contrôle automatique non lancé."];
+  const report = ["Vigie — rapport global", new Date().toLocaleString("fr-FR"), "", "Contrôles web", ...base, "", "Inventaire importé", ...(inventory.lines.length ? inventory.lines : ["Aucun inventaire fourni."]), "", "Éléments à confirmer", ...(inventory.flagged.length ? inventory.flagged : ["Aucun terme détecté." ]), "", "Notes", document.getElementById("notes").value.trim() || "Aucune note.", "", "Le rapport rassemble les données saisies ou importées. Une page web ne peut pas lire directement la liste des applications de l’iPhone."].join("\n");
+  const file = new Blob([report], { type: "text/plain;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(file);
+  link.download = "rapport-vigie-global.txt";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}, true);
 </script></body></html>
