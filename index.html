@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#102e29">
+<title>Vigie iPhone</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --page: #edf3ef; --card: #fff; --ink: #142b25; --muted: #435c52;
+  --line: #cddbd3; --accent: #14604f; --surface: #e8f4ee;
+  font: 100%/1.55 system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #12201a; --card: #192b22; --ink: #eef9f2; --muted: #b7cbc0;
+    --line: #486052; --accent: #a3e8ce; --surface: #253d30;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); }
+main { max-width: 760px; margin: auto; padding: 24px 16px 48px; }
+header { color: #f0fff7; background: #102e29; padding: clamp(24px, 6vw, 42px); border-radius: 24px; }
+header p { color: #cfebdf; max-width: 52ch; margin-bottom: 0; }
+h1 { font-size: clamp(2rem, 7vw, 3.5rem); letter-spacing: -.06em; line-height: 1.05; margin: 0; }
+h2 { margin: 0 0 12px; font-size: 1.3rem; }
+section { background: var(--card); padding: 20px; margin: 16px 0; border-radius: 18px; border: 1px solid var(--line); }
+small, .muted { color: var(--muted); }
+p { margin: 0 0 12px; }
+p:last-child { margin-bottom: 0; }
+progress { display: block; width: 100%; accent-color: #33876e; margin: 10px 0; }
+details { border-top: 1px solid var(--line); padding: 10px 0; }
+summary { cursor: pointer; font-weight: 650; padding: 8px 0; }
+summary span { display: block; font-weight: 400; color: var(--muted); font-size: .9rem; margin-left: 1.15em; }
+.details-body { margin: 8px 0 6px; padding: 12px; background: var(--surface); border-radius: 10px; }
+.path { font-weight: 650; }
+label { display: block; font-weight: 600; margin-bottom: 4px; }
+input, textarea, select, button { font: inherit; border-radius: 9px; min-height: 44px; }
+input, textarea, select {
+  color: var(--ink); background: var(--card); width: 100%; padding: 9px;
+  border: 1px solid var(--line); margin-bottom: 8px;
+}
+textarea { resize: vertical; }
+button { padding: 8px 14px; cursor: pointer; background: #14604f; border: 1px solid #14604f; color: white; }
+button.secondary { background: var(--card); color: var(--accent); border-color: var(--line); }
+button:disabled { opacity: .65; cursor: default; }
+a { color: var(--accent); }
+:focus-visible { outline: 3px solid #419c81; outline-offset: 3px; }
+#domain { overflow-wrap: anywhere; }
+#link-result { margin-top: 12px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Vigie iPhone</h1>
+    <p>Vérifie les accès à ton iPhone, examine un lien suspect et rassemble tes observations.</p>
+  </header>
+  <section aria-labelledby="checks-title">
+    <h2 id="checks-title">Vérifications de sécurité</h2>
+    <p id="progress-text" aria-live="polite"></p>
+    <progress id="progress" aria-label="Progression des vérifications"></progress>
+    <p class="muted">Ces contrôles sont manuels. Même si tout paraît normal, un piratage reste possible.</p>
+    <div id="checks"></div>
+  </section>
+  <section aria-labelledby="link-title">
+    <h2 id="link-title">Examiner un lien</h2>
+    <form id="link-form">
+      <label for="url">Adresse du lien</label>
+      <input id="url" inputmode="url" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="https://…" required maxlength="8192">
+      <p class="muted">Vigie inspecte le texte dans Safari. Elle n’ouvre jamais le lien.</p>
+      <button type="submit">Examiner</button>
+    </form>
+    <div id="link-result" role="status" hidden>
+      <p id="domain"></p>
+      <ul id="signals"></ul>
+    </div>
+  </section>
+  <section aria-labelledby="report-title">
+    <h2 id="report-title">Journal et rapport</h2>
+    <label for="notes">Tes observations</label>
+    <textarea id="notes" rows="5" maxlength="12000" placeholder="Date, signe observé et application concernée…"></textarea>
+    <p id="storage-info" class="muted">Tes réponses et notes restent dans ce navigateur. Évite de noter des mots de passe ou des codes de validation.</p>
+    <div class="actions">
+      <button type="button" id="export">Exporter le rapport</button>
+      <button type="button" id="reset" class="secondary">Effacer mes données</button>
+    </div>
+    <p id="report-status" role="status"></p>
+  </section>
+  <section aria-labelledby="advanced-title">
+    <h2 id="advanced-title">Analyse approfondie</h2>
+    <p>Si tu reçois une notification de menace, saisis toi-même <strong>account.apple.com</strong> dans Safari et vérifie si l’alerte apparaît dans ton compte.</p>
+    <p>Pour chercher des traces de logiciels espions connus dans une sauvegarde, utilise un ordinateur de confiance ou demande un examen spécialisé.</p>
+    <ul>
+      <li><a href="https://support.apple.com/fr-fr/102174" rel="noreferrer">Notifications de menace Apple</a></li>
+      <li><a href="https://imazing.com/guides/detect-pegasus-and-other-spyware-on-iphone" rel="noreferrer">Analyser une sauvegarde avec iMazing</a></li>
+      <li><a href="https://docs.mvt.re/en/latest/" rel="noreferrer">Mobile Verification Toolkit d’Amnesty International</a></li>
+    </ul>
+  </section>
+</main>
+<script>
+"use strict";
+
+const checks = [
+  ["account", "Appareils connectés", "Réglages → ton nom → liste des appareils",
+    "Vérifie que tu reconnais chacun des appareils associés à ton compte Apple.",
+    "Si un appareil t’est inconnu, retire-le du compte et change le mot de passe depuis un appareil de confiance."],
+  ["codes", "Demandes de connexion", "Notifications Apple et messagerie",
+    "Recherche les demandes de connexion ou codes reçus sans action de ta part.",
+    "Refuse toute demande inattendue et vérifie les appareils associés à ton compte."],
+  ["sharing", "Partage et localisation", "Réglages → Confidentialité et sécurité → Contrôle de sécurité",
+    "Dans « Gérer les partages et les accès », examine les personnes et apps qui accèdent à tes informations.",
+    "Retire les accès que tu ne souhaites plus autoriser."],
+  ["permissions", "Micro et caméra", "Réglages → Confidentialité et sécurité → Microphone ou Appareil photo",
+    "Vérifie quelles apps ont accès au micro et à la caméra. Le Rapport de confidentialité des apps aide à observer les accès à partir de son activation.",
+    "Retire les autorisations dont tu n’as plus besoin."],
+  ["profiles", "Profils et VPN", "Réglages → Général → VPN et gestion de l’appareil",
+    "Vérifie si un profil ou un VPN apparaît sans que tu en connaisses l’origine.",
+    "Sur un iPhone professionnel, demande au service informatique d’identifier le profil."],
+  ["updates", "Mise à jour d’iOS", "Réglages → Général → Mise à jour logicielle",
+    "Vérifie si une mise à jour est proposée.",
+    "Installe les correctifs disponibles."],
+  ["alerts", "Alertes de menace Apple", "Safari → account.apple.com",
+    "Saisis toi-même l’adresse et vérifie si une notification de menace apparaît après connexion.",
+    "Si Apple confirme l’alerte, suis ses consignes et demande une assistance spécialisée."],
+];
+
+const options = ["À vérifier", "Rien de suspect", "À examiner"];
+const storageKey = "vigie-web-v1";
+const el = (id) => document.getElementById(id);
+let answers = {};
+
+function storageUnavailable() {
+  el("storage-info").textContent = "Ce navigateur bloque le stockage local. Exporte le rapport avant de quitter la page.";
+}
+
+try {
+  const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
+  for (const [id] of checks) {
+    const value = saved?.answers?.[id];
+    if (options.includes(value)) answers[id] = value;
+  }
+  if (typeof saved?.notes === "string") el("notes").value = saved.notes;
+} catch {
+  storageUnavailable();
+}
+
+function save() {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify({ answers, notes: el("notes").value }));
+  } catch {
+    storageUnavailable();
+  }
+}
+
+function updateProgress() {
+  const values = Object.values(answers);
+  const completed = values.filter((value) => value !== options[0]).length;
+  const flagged = values.filter((value) => value === options[2]).length;
+  el("progress").max = checks.length;
+  el("progress").value = completed;
+  el("progress-text").textContent =
+    completed + " sur " + checks.length + " vérifications terminées" + (flagged ? " · " + flagged + " à examiner" : "");
+}
+
+function element(tag, content, parent) {
+  const node = document.createElement(tag);
+  node.textContent = content;
+  parent.append(node);
+  return node;
+}
+
+for (const [id, title, path, instruction, action] of checks) {
+  const details = element("details", "", el("checks"));
+  const summary = element("summary", title, details);
+  const status = element("span", answers[id] || options[0], summary);
+  const body = element("div", "", details);
+  body.className = "details-body";
+  element("p", path, body).className = "path";
+  element("p", instruction, body);
+  element("p", action, body);
+  const label = element("label", "Ton constat", body);
+  const select = element("select", "", body);
+  label.htmlFor = select.id = "check-" + id;
+  for (const option of options) element("option", option, select);
+  select.value = status.textContent;
+  select.addEventListener("change", () => {
+    answers[id] = select.value;
+    status.textContent = select.value;
+    save();
+    updateProgress();
+  });
+}
+updateProgress();
+el("notes").addEventListener("input", save);
+
+function inspectLink(input) {
+  const raw = input.trim();
+  if (!/^https?:\/\//i.test(raw) || /[\s\\]/u.test(raw)) return null;
+  let url;
+  try {
+    url = new URL(raw);
+  } catch {
+    return null;
+  }
+  const host = url.hostname.toLowerCase().replace(/\.$/, "");
+  const signals = [];
+  if (url.protocol === "http:") signals.push("Connexion non chiffrée (HTTP).");
+  if (url.username || url.password) signals.push("Le lien contient un identifiant avant le nom du site. Vérifie le domaine affiché.");
+  if (/^\[|^\d+\.\d+\.\d+\.\d+$/.test(host)) signals.push("Adresse IP directe.");
+  if (["bit.ly", "tinyurl.com", "t.co", "cutt.ly", "is.gd", "rebrand.ly"].includes(host)) {
+    signals.push("Raccourcisseur. La destination finale reste inconnue.");
+  }
+  if (host.split(".").some((part) => part.startsWith("xn--"))) signals.push("Nom de domaine internationalisé. Vérifie son orthographe.");
+  if (host.split(".").length >= 5 && !/^\d+\./.test(host)) signals.push("Nombreux sous-domaines. Vérifie le site indiqué.");
+  return { host, signals };
+}
+
+el("link-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const result = inspectLink(el("url").value);
+  el("link-result").hidden = false;
+  el("signals").replaceChildren();
+  el("domain").textContent = result
+    ? "Domaine indiqué : " + result.host
+    : "Colle une adresse web complète commençant par https:// ou http://.";
+  if (result) {
+    const findings = result.signals.length ? result.signals : ["Aucun indice visible dans cette adresse. Le site peut tout de même être frauduleux."];
+    for (const finding of findings) element("li", finding, el("signals"));
+  }
+});
+el("url").addEventListener("input", () => { el("link-result").hidden = true; });
+
+el("reset").addEventListener("click", () => {
+  if (!confirm("Effacer les constats et les notes de ce navigateur ?")) return;
+  answers = {};
+  el("notes").value = "";
+  el("url").value = "";
+  el("link-result").hidden = true;
+  for (const [id] of checks) {
+    const select = el("check-" + id);
+    select.value = options[0];
+    select.closest("details").querySelector("summary span").textContent = options[0];
+  }
+  save();
+  updateProgress();
+  el("report-status").textContent = "Constats et notes effacés.";
+});
+
+el("export").addEventListener("click", () => {
+  const rows = checks.map(([id, title]) => title + " : " + (answers[id] || options[0]));
+  const report = ["Vigie iPhone · Rapport de vérifications manuelles", new Date().toLocaleString("fr-FR"), "",
+    ...rows, "", "Notes", el("notes").value.trim() || "Aucune note.",
+    "", "Ces constats ne constituent pas un diagnostic de compromission."].join("\n");
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(new Blob([report], { type: "text/plain;charset=utf-8" }));
+  link.download = "rapport-vigie.txt";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 30000);
+});
+</script>
+</body>
+</html>
